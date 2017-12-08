@@ -1,30 +1,47 @@
+import numpy as np
 import os
 import torch
 import torch.utils.data as data
-import numpy as np
 import scipy.io as io
 import pickle
-from skimage import io, transform
-from multiprocessing import Pool
 import time
 import torchvision.transforms as trans
 import random
+from multiprocessing import Pool
 from PIL import Image
 
 
-class ucf101_rgb_train_loader_basic(data.Dataset):
-    def __init__(self, data_dir, file_dir, transform):
+class ucf101_rgb_loader_basic(data.Dataset):
+    def __init__(self, data_dir, file_dir, data_type, image_size=224):
+        self.data_type = data_type
         self.data_dir = data_dir  # data_dir = /home/yongyi/ucf101_train/my_code/data
         self.file_dir = file_dir  # file_dir = /home/local/yongyi/...
-        self.transform = transform
+        self.image_size = image_size
         self.size_all = [256, 224, 192, 168]  # 4 different length for width and height following TSN.
 
-        with open(os.path.join(self.data_dir, 'train_name.pkl'), 'r') as f:
-            self.data_name_list = pickle.load(f)
-        with open(os.path.join(self.data_dir, 'train_nFrames.pkl'), 'r') as f:
-            self.nFrame_list = pickle.load(f)
-        with open(os.path.join(self.data_dir, 'train_label.pkl'), 'r') as f:
-            self.label_list = pickle.load(f)
+        if self.data_type == 'train':
+            with open(os.path.join(self.data_dir, 'train_name.pkl'), 'r') as f:
+                self.data_name_list = pickle.load(f)
+            with open(os.path.join(self.data_dir, 'train_nFrames.pkl'), 'r') as f:
+                self.nFrame_list = pickle.load(f)
+            with open(os.path.join(self.data_dir, 'train_label.pkl'), 'r') as f:
+                self.label_list = pickle.load(f)
+            self.transform = None
+
+        elif self.data_type == 'test':
+            with open(os.path.join(self.data_dir, 'test_name.pkl'), 'r') as f:
+                self.data_name_list = pickle.load(f)
+            with open(os.path.join(self.data_dir, 'test_nFrames.pkl'), 'r') as f:
+                self.nFrame_list = pickle.load(f)
+            with open(os.path.join(self.data_dir, 'test_label.pkl'), 'r') as f:
+                self.label_list = pickle.load(f)
+            self.transform = trans.Compose([trans.Scale(256),
+                                            trans.TenCrop(self.image_size),
+                                            trans.Lambda(lambda crops:
+                                            torch.stack([trans.ToTensor()(trans.Resize(self.image_size)(crop)) for crop in crops]))])
+
+        else:
+            raise('Error data_type')
 
     def __getitem__(self, index):
         # Read a list of image by index
@@ -35,20 +52,23 @@ class ucf101_rgb_train_loader_basic(data.Dataset):
         """
         Currently random select one frame; TODO: TSN
         """
-        image_index = 1
+        image_index = random.randint(1, self.nFrame_list[index])
         img_dir = os.path.join(self.file_dir, file_name, ('frame' + '%06d' % image_index + '.jpg'))
         img = Image.open(img_dir).convert('RGB')
 
         # Perform transform
         # Scale jittering
-        width_rand = self.size_all(random.randint(0, 3))
-        height_rand = self.size_all(random.randint(0, 3))
+        width_rand = self.size_all[random.randint(0, 3)]
+        height_rand = self.size_all[random.randint(0, 3)]
         crop_size = (height_rand, width_rand)
 
-        transform = trans.Compose([trans.Scale(256),
-                                  trans.TenCrop(crop_size),
-                                  trans.Lambda(lambda crops:
-                                  torch.stack([trans.ToTensor()(crop) for crop in crops]))])
+        if self.transform is None:
+            transform = trans.Compose([trans.Scale(256),
+                                      trans.TenCrop(crop_size),
+                                      trans.Lambda(lambda crops:
+                                      torch.stack([trans.ToTensor()(trans.Resize(self.image_size)(crop)) for crop in crops]))])
+        else:
+            transform = self.transform
 
         img = transform(img)
 
@@ -59,24 +79,77 @@ class ucf101_rgb_train_loader_basic(data.Dataset):
         return len(self.data_name_list)
 
 
-class ucf101_rgb_test_loader(data.Dataset):
-    def __init__(self, data_dir, transform):
-        self.data_dir = data_dir
-        # self.transform = transform  #TenCrop
+class ucf101_rgb_loader_tsn(data.Dataset):
+    def __init__(self, data_dir, file_dir, data_type, image_size=224, tsn_num=3):
+        self.data_type = data_type
+        self.data_dir = data_dir  # data_dir = /home/yongyi/ucf101_train/my_code/data
+        self.file_dir = file_dir  # file_dir = /home/local/yongyi/...
+        self.image_size = image_size
+        self.size_all = [256, 224, 192, 168]  # 4 different length for width and height following TSN.\
+        self.tsn_num = tsn_num  # The number of segmentations for a video.
+
+        if self.data_type == 'train':
+            with open(os.path.join(self.data_dir, 'train_name.pkl'), 'r') as f:
+                self.data_name_list = pickle.load(f)
+            with open(os.path.join(self.data_dir, 'train_nFrames.pkl'), 'r') as f:
+                self.nFrame_list = pickle.load(f)
+            with open(os.path.join(self.data_dir, 'train_label.pkl'), 'r') as f:
+                self.label_list = pickle.load(f)
+            self.transform = None
+
+        elif self.data_type == 'test':
+            with open(os.path.join(self.data_dir, 'test_name.pkl'), 'r') as f:
+                self.data_name_list = pickle.load(f)
+            with open(os.path.join(self.data_dir, 'test_nFrames.pkl'), 'r') as f:
+                self.nFrame_list = pickle.load(f)
+            with open(os.path.join(self.data_dir, 'test_label.pkl'), 'r') as f:
+                self.label_list = pickle.load(f)
+            self.transform = trans.Compose([trans.Scale(256),
+                                            trans.TenCrop(self.image_size),
+                                            trans.Lambda(lambda crops:
+                                            torch.stack([trans.ToTensor()(trans.Resize(self.image_size)(crop)) for crop in crops]))])
+
+        else:
+            raise('Error data_type')
 
     def __getitem__(self, index):
-        pass
+        # Read a list of image by index
+        target = self.label_list[index:index+1, :]
+        target = torch.from_numpy(target)  # size: (1, 101) 101 classes for ucf101
+        # One image example
+        file_name = self.data_name_list[index]
+        """
+        Currently random select one frame; TODO: TSN
+        """
+        seg_len = int(self.nFrame_list[index] / self.tsn_num)
+        image_list = []
+        for i in range(self.tsn_num):
+            image_index = random.randint(1 + i * seg_len, (i + 1) * seg_len)
+            img_dir = os.path.join(self.file_dir, file_name, ('frame' + '%06d' % image_index + '.jpg'))
+            img = Image.open(img_dir).convert('RGB')
+            image_list.append(img)
+
+        # Perform transform
+        # Scale jittering
+        width_rand = self.size_all[random.randint(0, 3)]
+        height_rand = self.size_all[random.randint(0, 3)]
+        crop_size = (height_rand, width_rand)
+
+        if self.transform is None:
+            transform = trans.Compose([trans.Scale(256),
+                                      trans.TenCrop(crop_size),
+                                      trans.Lambda(lambda crops:
+                                      torch.stack([trans.ToTensor()(trans.Resize(self.image_size)(crop)) for crop in crops]))])
+        else:
+            transform = self.transform
+
+        img_tensor = torch.stack([transform(img) for img in image_list])  # size (self.tsn_num, 10, 3, 224, 224)
+
+        # Return image and target
+        return img_tensor, target
 
     def __len__(self):
-        pass
-
-
-
-
-
-
-
-
+        return len(self.data_name_list)
 
 
 def process_data_from_mat():
