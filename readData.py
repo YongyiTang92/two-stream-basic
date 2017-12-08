@@ -127,7 +127,7 @@ def extract_image_from_file(file_name, nFrames, data_args=True):
     Output:
         image: with size (224, 224, 3), np.float32
     """
-    data_dir = '/home/share/ucf-data/jpegs_256'
+    data_dir = '/home/local/yongyi/ucf-data/jpegs_256'
     n = np.random.randint(1, nFrames + 1)
     image_path = os.path.join(data_dir, file_name, ('frame' + '%06d' % n + '.jpg'))
     image = cv2.imread(image_path)
