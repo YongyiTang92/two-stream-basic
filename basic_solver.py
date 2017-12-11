@@ -8,7 +8,7 @@ import shutil
 import random
 from torch.autograd import Variable
 from PIL import Image
-from utilities import save_checkpoint, read_checkpoint
+from utilities import save_checkpoint, read_checkpointm
 from logger import Logger
 from model import Seq2SeqModel
 import data_utils
@@ -16,6 +16,7 @@ import time
 import h5py
 import sys
 from video_data_loader import ucf101_rgb_loader_basic_train, ucf101_rgb_loader_basic_test
+from model import rgb_resnet18_basic
 
 
 class solver(object):

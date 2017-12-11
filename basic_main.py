@@ -2,6 +2,7 @@ import argparse
 import os
 import torch
 import torch.backends.cudnn as cudnn
+from basic_solver import solver
 
 
 def main(FLAGS, train_dir, summaries_dir):
@@ -9,11 +10,11 @@ def main(FLAGS, train_dir, summaries_dir):
     os.environ['CUDA_VISIBLE_DEVICES'] = FLAGS.device
 
     solver_model = solver(FLAGS, train_dir, summaries_dir)
-
-    if FLAGS.sample:
-        solver_model.sample()
-    else:
-        solver_model.train()
+    solver_model.train()
+    # if FLAGS.sample:
+    #     solver_model.sample()
+    # else:
+    #     solver_model.train()
 
 
 parser = argparse.ArgumentParser(description='PyTorch UCF101 Training')
