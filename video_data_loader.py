@@ -49,10 +49,12 @@ class ucf101_rgb_loader_basic_train(data.Dataset):
                                                 torch.stack([trans.ToTensor()(trans.Resize(self.image_size)(crop)) for crop in crops]))])
 
         img = transform(img)
-        target = target.clone().repeat(10, 1)
+        random_crop_index = random.randint(0, 9)
+        img = img[random_crop_index, :]
+        target = target.squeeze()
 
         # Return image and target
-        return img, target  # img size: (10, 3, 224, 224); target size: (10, 101)
+        return img, target  # img size: (3, 224, 224); target size: (101)
 
     def __len__(self):
         return len(self.data_name_list)
@@ -86,9 +88,10 @@ class ucf101_rgb_loader_basic_test(data.Dataset):
         Currently random select one frame; TODO: TSN
         """
         image_list = []
-        num_seg = self.nFrame_list[index] / 10
+        seg_len = 1v0
+        num_seg = self.nFrame_list[index] / seg_len
         for i in range(num_seg):
-            image_index = random.randint(1 + i * 10 * seg_len, (i + 1) * 10 * seg_len)
+            image_index = random.randint(1 + i * seg_len, (i + 1) * seg_len)
             img_dir = os.path.join(self.file_dir, file_name, ('frame' + '%06d' % image_index + '.jpg'))
             img = Image.open(img_dir).convert('RGB')
             image_list.append(img)
@@ -112,7 +115,7 @@ class ucf101_rgb_loader_basic_test(data.Dataset):
         target = torch.stack([target for x in range(len(image_list))])  # size (num_seg, 10, 101)
 
         # Return image and target
-        return img, target  # img size: (10, 3, 224, 224); target size: (10, 101)
+        return img_tensor, target  # img size: (num_seg, 10, 3, 224, 224); target size: (num_seg, 10, 101)
 
     def __len__(self):
         return len(self.data_name_list)
