@@ -1,5 +1,10 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import torch
 import torch.nn as nn
+import numpy as np
 import os
 import torchvision
 import subprocess
@@ -8,7 +13,7 @@ import shutil
 import random
 from torch.autograd import Variable
 from PIL import Image
-from utilities import save_checkpoint, read_checkpointm
+from utilities import save_checkpoint, read_checkpoint
 from logger import Logger
 from model import Seq2SeqModel
 import data_utils
@@ -28,12 +33,12 @@ class solver(object):
         self.model = self.create_model()
         self.creat_data_loader()
 
-    def create_model(self, actions, sampling=False):
+    def create_model(self, sampling=False):
         """Create translation model and initialize or load parameters in session."""
 
         model = rgb_resnet18_basic(self.FLAGS)
 
-        if self.FLAGS.load <= 0:
+        if notb self.FLAGS.resume:
             print("Creating model with fresh parameters.")
             self.start_step = 0
         else:
@@ -57,16 +62,67 @@ class solver(object):
         Train the Network
         """
         for step in range(self.FLAGS.iterations):
-            train_loss, train_correct = 0.0, 0.0
-            test_loss, test_correct = 0.0, 0.0
+            train_loss, train_correct = [], []
+            test_loss, test_correct = [], []
 
+            start_time = time.time()
             for i, data in enumerate(self.train_loader, 0):
                 # get the inputs
                 images, labels = data
                 loss, correct = self.model.train_step(images, labels, forward_only=False)
-                train_loss += loss
-                train_correct += correct
+                train_loss.append(loss.numpy())
+                train_correct.append(correct.numpy())
+            total_train_loss = np.mean(np.hstack(train_loss))
+            total_train_correct = np.mean(np.hstack(train_correct))
 
+            step_time = (time.time() - start_time)
+
+            print("============================\n"
+                  "Global step:         %d\n"
+                  "Learning rate:       %.4f\n"
+                  "Step-time (ms):     %.4f\n"
+                  "Train loss avg:      %.4f\n"
+                  "Train Accuracy:      %.4f\n"
+                  "============================" % (step + 1,
+                                                    self.model.learning_rate, step_time * 1000,
+                                                    total_train_loss, total_train_correct))
+
+            start_time = time.time()
             for test_index in range(len(self.test_dataset)):
                 test_image, test_labels = self.test_dataset[test_index]
                 loss, correct = self.model.test_step(test_image, test_labels)
+                test_loss.append(loss.numpy())
+                test_correct.append(correct.numpy())
+            total_test_loss = np.mean(np.hstack(test_loss))
+            total_test_correct = np.mean(np.hstack(test_correct))
+            step_time = (time.time() - start_time)
+            print("Test-time (ms):     %.4f\n"
+                  "Test loss avg:      %.4f\n"
+                  "Test Accuracy:      %.4f\n"
+                  "============================" % (step_time * 1000,
+                                                    total_test_loss, total_test_correct))
+            print()
+
+            self.logger.scalar_summary('train_loss', total_train_loss, step + 1)
+            self.logger.scalar_summary('train_acc', total_train_correct, step + 1)
+            self.logger.scalar_summary('test_loss', total_test_loss, step + 1)
+            self.logger.scalar_summary('test_acc', total_test_correct, step + 1)
+            self.logger.scalar_summary('learning_rate', self.model.learning_rate, step + 1)
+
+            # Adjust Learning Rate
+            if step == 5000:  # Unfreeze the parameters
+                self.model.set_optimizer(self.model.learning_rate, 1.0)
+            if step % self.FLAGS.learning_rate_step == 0:
+                self.model.learning_rate = self.model.learning_rate * self.FLAGS.learning_rate_decay_factor
+                self.model.set_optimizer(self.model.learning_rate, 1.0)
+                # Save Checkpoint
+            if step % self.FLAGS.print_freq == 0:
+                print("Saving the model...")
+                start_time = time.time()
+                save_checkpoint({
+                    'step': step,
+                    'state_dict': self.model.model.state_dict()
+                }, self.train_dir, 100)
+                print('Saving checkpoint at step: %d' % (step + 1))
+                # model.saver.save(sess, os.path.normpath(os.path.join(train_dir, 'checkpoint')), global_step=current_step )
+                print("done in {0:.2f} ms".format((time.time() - start_time) * 1000))

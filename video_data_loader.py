@@ -88,8 +88,8 @@ class ucf101_rgb_loader_basic_test(data.Dataset):
         Currently random select one frame; TODO: TSN
         """
         image_list = []
-        seg_len = 1v0
-        num_seg = self.nFrame_list[index] / seg_len
+        seg_len = 10
+        num_seg = int(self.nFrame_list[index] / seg_len)
         for i in range(num_seg):
             image_index = random.randint(1 + i * seg_len, (i + 1) * seg_len)
             img_dir = os.path.join(self.file_dir, file_name, ('frame' + '%06d' % image_index + '.jpg'))

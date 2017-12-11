@@ -31,7 +31,7 @@ parser.add_argument('--iterations', default=5000, type=int,
                     help='number of total iterations to run')
 parser.add_argument('--start_epoch', default=0, type=int,
                     help='manual epoch number (useful on restarts)')
-parser.add_argument('--print_freq', default=10, type=int,
+parser.add_argument('--print_freq', default=500, type=int,
                     help='print frequency (default: 10)')
 parser.add_argument('--device', default='0', type=str, help='id(s) for CUDA_VISIBLE_DEVICES')
 parser.add_argument('--resume', help="Load the check points.", action="store_true")

@@ -1,6 +1,8 @@
 import numpy as np
 import torch
 from my_resnet import resnet18
+import torch.nn as nn
+from torch.autograd import Variable
 
 
 class rgb_resnet18_basic(object):
@@ -9,14 +11,16 @@ class rgb_resnet18_basic(object):
         self.model = resnet18(pretrained=True)
         self.max_gradient_norm = FLAGS.max_gradient_norm
         self.loss = nn.CrossEntropyLoss()
+        self.learning_rate = FLAGS.lr
+        self.set_optimizer(self.learning_rate, 0.1)
         if torch.cuda.is_available():
             self.model = self.model.cuda()
             self.loss = self.loss.cuda()
 
     def set_optimizer(self, lr, tune_ratio=0.1):
-        ignored_params = list(map(id, [model.fc_new.parameters(), model.bn1_new.parameters()]))
-        base_params = filter(lambda p: id(p) not in ignored_params, model.parameters())
-        train_params = filter(lambda p: id(p) in ignored_params, model.parameters())
+        ignored_params = list(map(id, [self.model.fc_new.parameters(), self.model.bn1_new.parameters()]))
+        base_params = filter(lambda p: id(p) not in ignored_params, self.model.parameters())
+        train_params = filter(lambda p: id(p) in ignored_params, self.model.parameters())
         self.optimizer = torch.optim.SGD(
             [{'params': base_params}, {'params': train_params, 'lr': lr}],
             lr=lr * tune_ratio, momentum=self.FLAGS.momentum, weight_decay=self.FLAGS.weight_decay)
@@ -36,11 +40,11 @@ class rgb_resnet18_basic(object):
         else:
             self.model.train()
 
-        _, labels_index = torch.max(label_tensor)
+        _, labels_index = torch.max(label_tensor, 1)
         labels_index = labels_index.long()
         img_var, label_var = self.to_variable(image_tensor), self.to_variable(labels_index)
         predict_score = self.model(img_var)
-        loss = self.loss(predict_score, label_var[:, 0])
+        loss = self.loss(predict_score, label_var[:])
         _, predict_labels = torch.max(predict_score, 1)
         correct = predict_labels.eq(label_var)
 
@@ -61,13 +65,13 @@ class rgb_resnet18_basic(object):
         """
         self.model.zero_grad()
         self.model.eval()
-        _, labels_index = torch.max(label_tensor[:, 0, :])  # The label for a video must the same
+        _, labels_index = torch.max(label_tensor[0:1, 0, :], 1)  # The label for a video must the same
         labels_index = labels_index.long()
         img_var, label_var = self.to_variable(image_tensor), self.to_variable(labels_index)
         img_var = img_var.view(-1, img_var.size(2), img_var.size(3), img_var.size(4))
         predict_score = self.model(img_var)  # May OOM
         predict_score_avg = torch.mean(predict_score, 0, keepdim=True)
-        loss = self.loss(predict_score_avg, label_var[:, 0])
+        loss = self.loss(predict_score_avg, label_var[:])
         _, predict_labels = torch.max(predict_score, 1)
         correct = predict_labels.eq(label_var)
         return self.to_data(loss), self.to_data(correct)
