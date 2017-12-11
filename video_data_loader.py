@@ -12,7 +12,7 @@ from PIL import Image
 
 
 class ucf101_rgb_loader_basic(data.Dataset):
-    def __init__(self, data_dir, file_dir, data_type, image_size=224):
+    def __init__(self, data_dir, file_dir, data_type, image_size=(224, 224)):
         self.data_type = data_type
         self.data_dir = data_dir  # data_dir = /home/yongyi/ucf101_train/my_code/data
         self.file_dir = file_dir  # file_dir = /home/local/yongyi/...
@@ -38,14 +38,14 @@ class ucf101_rgb_loader_basic(data.Dataset):
             self.transform = trans.Compose([trans.Scale(256),
                                             trans.TenCrop(self.image_size),
                                             trans.Lambda(lambda crops:
-                                            torch.stack([trans.ToTensor()(trans.Resize(self.image_size)(crop)) for crop in crops]))])
+                                                         torch.stack([trans.ToTensor()(trans.Resize(self.image_size)(crop)) for crop in crops]))])
 
         else:
             raise('Error data_type')
 
     def __getitem__(self, index):
         # Read a list of image by index
-        target = self.label_list[index:index+1, :]
+        target = self.label_list[index:index + 1, :]
         target = torch.from_numpy(target)  # size: (1, 101) 101 classes for ucf101
         # One image example
         file_name = self.data_name_list[index]
@@ -64,23 +64,24 @@ class ucf101_rgb_loader_basic(data.Dataset):
 
         if self.transform is None:
             transform = trans.Compose([trans.Scale(256),
-                                      trans.TenCrop(crop_size),
-                                      trans.Lambda(lambda crops:
-                                      torch.stack([trans.ToTensor()(trans.Resize(self.image_size)(crop)) for crop in crops]))])
+                                       trans.TenCrop(crop_size),
+                                       trans.Lambda(lambda crops:
+                                                    torch.stack([trans.ToTensor()(trans.Resize(self.image_size)(crop)) for crop in crops]))])
         else:
             transform = self.transform
 
         img = transform(img)
+        target = traget.repeat(10, 1)
 
         # Return image and target
-        return img, target
+        return img, target  # img size: (10, 3, 224, 224); target size: (10, 101)
 
     def __len__(self):
         return len(self.data_name_list)
 
 
 class ucf101_rgb_loader_tsn(data.Dataset):
-    def __init__(self, data_dir, file_dir, data_type, image_size=224, tsn_num=3):
+    def __init__(self, data_dir, file_dir, data_type, image_size=(224, 224), tsn_num=3):
         self.data_type = data_type
         self.data_dir = data_dir  # data_dir = /home/yongyi/ucf101_train/my_code/data
         self.file_dir = file_dir  # file_dir = /home/local/yongyi/...
@@ -107,14 +108,14 @@ class ucf101_rgb_loader_tsn(data.Dataset):
             self.transform = trans.Compose([trans.Scale(256),
                                             trans.TenCrop(self.image_size),
                                             trans.Lambda(lambda crops:
-                                            torch.stack([trans.ToTensor()(trans.Resize(self.image_size)(crop)) for crop in crops]))])
+                                                         torch.stack([trans.ToTensor()(trans.Resize(self.image_size)(crop)) for crop in crops]))])
 
         else:
             raise('Error data_type')
 
     def __getitem__(self, index):
         # Read a list of image by index
-        target = self.label_list[index:index+1, :]
+        target = self.label_list[index:index + 1, :]
         target = torch.from_numpy(target)  # size: (1, 101) 101 classes for ucf101
         # One image example
         file_name = self.data_name_list[index]
@@ -137,13 +138,15 @@ class ucf101_rgb_loader_tsn(data.Dataset):
 
         if self.transform is None:
             transform = trans.Compose([trans.Scale(256),
-                                      trans.TenCrop(crop_size),
-                                      trans.Lambda(lambda crops:
-                                      torch.stack([trans.ToTensor()(trans.Resize(self.image_size)(crop)) for crop in crops]))])
+                                       trans.TenCrop(crop_size),
+                                       trans.Lambda(lambda crops:
+                                                    torch.stack([trans.ToTensor()(trans.Resize(self.image_size)(crop)) for crop in crops]))])
         else:
             transform = self.transform
 
+        target = target.repeat(10, 1)
         img_tensor = torch.stack([transform(img) for img in image_list])  # size (self.tsn_num, 10, 3, 224, 224)
+        target = torch.stack([target for x in range(len(image_list))])  # size (self.tsn_num, 10, 101)
 
         # Return image and target
         return img_tensor, target

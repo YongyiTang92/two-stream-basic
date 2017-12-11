@@ -166,6 +166,7 @@ class ResNet(nn.Module):
         # if len(missing) > 0:
         #     raise KeyError('missing keys in state_dict: "{}"'.format(missing))
 
+
 def resnet50(pretrained=False):
     """Constructs a ResNet-50 model.
     Args:
@@ -177,6 +178,7 @@ def resnet50(pretrained=False):
         model.load_state_dict(torch.load(pretrain_model))
     return model
 
+
 def resnet50_flow(pretrained=False):
     """Constructs a ResNet-50 model.
     Args:
@@ -187,24 +189,26 @@ def resnet50_flow(pretrained=False):
         model.load_state_dict(model_zoo.load_url(model_urls['resnet50']))
     return model
 
+
 def resnet18(pretrained=False):
     """Constructs a ResNet-50 model.
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
-    model = ResNet(BasicBlock, [2,2,2,2])
+    model = ResNet(BasicBlock, [2, 2, 2, 2])
     if pretrained:
         pretrain_model = '/home/yongyi/ucf101_train/my_code/data/resnet18-5c106cde.pth'
         model.load_state_dict(torch.load(pretrain_model))
         # model.layer4 = model._make_layer(BasicBlock, 512, 2, stride=2)
     return model
 
+
 def resnet18_flow(pretrained=False):
     """Constructs a ResNet-50 model.
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
-    model = ResNet(BasicBlock, [2,2,2,2], in_channel=20)
+    model = ResNet(BasicBlock, [2, 2, 2, 2], in_channel=20)
     if pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['resnet50']))
     return model
