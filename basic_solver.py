@@ -39,12 +39,12 @@ class solver(object):
 
     def creat_data_loader(self):
         train_dataset = ucf101_rgb_loader_basic_train(self.FLAGS.data, self.FLAGS.rgb_file)
-        self.test_dataset = ucf101_rgb_loader_basic_test(self.FLAGS.data, self.FLAGS.rgb_file)
+        test_dataset = ucf101_rgb_loader_basic_test(self.FLAGS.data, self.FLAGS.rgb_file)
         self.train_loader = torch.utils.data.DataLoader(train_dataset,
                                                         self.FLAGS.batch_size, shuffle=True,
                                                         num_workers=self.FLAGS.workers)
         self.test_loader = torch.utils.data.DataLoader(test_dataset,
-                                                       1, shuffle=True,
+                                                       1, shuffle=False,
                                                        num_workers=self.FLAGS.workers)
 
     def train(self):
@@ -76,23 +76,23 @@ class solver(object):
                   "============================" % (step + 1,
                                                     self.model.learning_rate, step_time * 1000,
                                                     total_train_loss, total_train_correct))
-
-            start_time = time.time()
-            for i, data in enumerate(self.train_loader, 0):
-                images, labels = data
-                test_image, test_labels = images[0, :], labels[0, :]
-                # test_image, test_labels = self.test_dataset[test_index]
-                loss, correct = self.model.test_step(test_image, test_labels)
-                test_loss.append(loss.numpy())
-                test_correct.append(correct.numpy())
-            total_test_loss = np.mean(np.hstack(test_loss))
-            total_test_correct = np.mean(np.hstack(test_correct))
-            step_time = (time.time() - start_time)
-            print("Test-time (ms):     %.4f\n"
-                  "Test loss avg:      %.4f\n"
-                  "Test Accuracy:      %.4f\n"
-                  "============================" % (step_time * 1000,
-                                                    total_test_loss, total_test_correct))
+            if (step + 1) == 100:
+                start_time = time.time()
+                for i, data in enumerate(self.test_loader, 0):
+                    images, labels = data
+                    test_image, test_labels = images[0, :], labels[0, :]
+                    # test_image, test_labels = self.test_dataset[test_index]
+                    loss, correct = self.model.test_step(test_image, test_labels)
+                    test_loss.append(loss.numpy())
+                    test_correct.append(correct.numpy())
+                total_test_loss = np.mean(np.hstack(test_loss))
+                total_test_correct = np.mean(np.hstack(test_correct))
+                step_time = (time.time() - start_time)
+                print("Test-time (ms):     %.4f\n"
+                      "Test loss avg:      %.4f\n"
+                      "Test Accuracy:      %.4f\n"
+                      "============================" % (step_time * 1000,
+                                                        total_test_loss, total_test_correct))
             print()
 
             self.logger.scalar_summary('train_loss', total_train_loss, step + 1)
