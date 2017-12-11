@@ -43,6 +43,9 @@ class solver(object):
         self.train_loader = torch.utils.data.DataLoader(train_dataset,
                                                         self.FLAGS.batch_size, shuffle=True,
                                                         num_workers=self.FLAGS.workers)
+        self.test_loader = torch.utils.data.DataLoader(test_dataset,
+                                                       1, shuffle=True,
+                                                       num_workers=self.FLAGS.workers)
 
     def train(self):
         """
@@ -75,8 +78,10 @@ class solver(object):
                                                     total_train_loss, total_train_correct))
 
             start_time = time.time()
-            for test_index in range(len(self.test_dataset)):
-                test_image, test_labels = self.test_dataset[test_index]
+            for i, data in enumerate(self.train_loader, 0):
+                images, labels = data
+                test_image, test_labels = images[0, :], labels[0, :]
+                # test_image, test_labels = self.test_dataset[test_index]
                 loss, correct = self.model.test_step(test_image, test_labels)
                 test_loss.append(loss.numpy())
                 test_correct.append(correct.numpy())
@@ -97,13 +102,13 @@ class solver(object):
             self.logger.scalar_summary('learning_rate', self.model.learning_rate, step + 1)
 
             # Adjust Learning Rate
-            if step == 5000:  # Unfreeze the parameters
+            if (step + 1) == 5000:  # Unfreeze the parameters
                 self.model.set_optimizer(self.model.learning_rate, 1.0)
-            if step % self.FLAGS.learning_rate_step == 0:
+            if (step + 1) % self.FLAGS.learning_rate_step == 0:
                 self.model.learning_rate = self.model.learning_rate * self.FLAGS.learning_rate_decay_factor
                 self.model.set_optimizer(self.model.learning_rate, 1.0)
                 # Save Checkpoint
-            if step % self.FLAGS.print_freq == 0:
+            if (step + 1) % self.FLAGS.print_freq == 0:
                 print("Saving the model...")
                 start_time = time.time()
                 save_checkpoint({
