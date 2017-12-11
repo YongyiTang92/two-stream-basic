@@ -3,23 +3,10 @@ from __future__ import division
 from __future__ import print_function
 
 import torch
-import torch.nn as nn
 import numpy as np
-import os
-import torchvision
-import subprocess
-import math
-import shutil
-import random
-from torch.autograd import Variable
-from PIL import Image
 from utilities import save_checkpoint, read_checkpoint
 from logger import Logger
-from model import Seq2SeqModel
-import data_utils
 import time
-import h5py
-import sys
 from video_data_loader import ucf101_rgb_loader_basic_train, ucf101_rgb_loader_basic_test
 from model import rgb_resnet18_basic
 
@@ -38,7 +25,7 @@ class solver(object):
 
         model = rgb_resnet18_basic(self.FLAGS)
 
-        if notb self.FLAGS.resume:
+        if not self.FLAGS.resume:
             print("Creating model with fresh parameters.")
             self.start_step = 0
         else:
