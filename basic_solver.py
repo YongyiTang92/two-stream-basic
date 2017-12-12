@@ -58,7 +58,7 @@ class solver(object):
         """
         Train the Network
         """
-        for step in range(self.start_step，self.FLAGS.iterations):
+        for step in range(self.start_step, self.FLAGS.iterations):
             train_loss, train_correct = [], []
             test_loss, test_correct = [], []
 
