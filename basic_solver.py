@@ -17,13 +17,14 @@ class solver(object):
         self.summaries_dir = summaries_dir
         self.logger = Logger(self.summaries_dir)
         self.train_dir = train_dir
+        self.data_type = FLAGS.data_type
         self.model = self.create_model()
         self.creat_data_loader()
 
     def create_model(self, sampling=False):
         """Create translation model and initialize or load parameters in session."""
 
-        model = rgb_resnet18_basic(self.FLAGS)
+        model = resnet18_basic(self.FLAGS, self.data_type)
 
         if not self.FLAGS.resume:
             print("Creating model with fresh parameters.")
@@ -38,8 +39,14 @@ class solver(object):
         return model
 
     def creat_data_loader(self):
-        train_dataset = ucf101_rgb_loader_basic_train(self.FLAGS.data, self.FLAGS.rgb_file)
-        test_dataset = ucf101_rgb_loader_basic_test(self.FLAGS.data, self.FLAGS.rgb_file)
+        if self.data_type == 'rgb':
+            train_dataset = ucf101_rgb_loader_basic_train(self.FLAGS.data, self.FLAGS.rgb_file)
+            test_dataset = ucf101_rgb_loader_basic_test(self.FLAGS.data, self.FLAGS.rgb_file)
+        elif self.data_type == 'flow':
+            train_dataset = ucf101_flow_loader_basic_train(self.FLAGS.data, self.FLAGS.flow_file)
+            test_dataset = ucf101_flow_loader_basic_test(self.FLAGS.data, self.FLAGS.flow_file)
+        else:
+            raise('Error data type: ', self.data_type)
         self.train_loader = torch.utils.data.DataLoader(train_dataset,
                                                         self.FLAGS.batch_size, shuffle=True,
                                                         num_workers=self.FLAGS.workers)
@@ -51,7 +58,7 @@ class solver(object):
         """
         Train the Network
         """
-        for step in range(self.FLAGS.iterations):
+        for step in range(self.start_step，self.FLAGS.iterations):
             train_loss, train_correct = [], []
             test_loss, test_correct = [], []
 
@@ -68,12 +75,13 @@ class solver(object):
             step_time = (time.time() - start_time)
 
             print("============================\n"
+                  "Data Type:           %s\n"
                   "Global step:         %d\n"
                   "Learning rate:       %.4f\n"
-                  "Step-time (ms):     %.4f\n"
+                  "Step-time (ms):      %.4f\n"
                   "Train loss avg:      %.4f\n"
                   "Train Accuracy:      %.4f\n"
-                  "============================" % (step + 1,
+                  "============================" % (self.data_type, step + 1,
                                                     self.model.learning_rate, step_time * 1000,
                                                     total_train_loss, total_train_correct))
             if (step + 1) == 100:
@@ -93,16 +101,17 @@ class solver(object):
                       "Test Accuracy:      %.4f\n"
                       "============================" % (step_time * 1000,
                                                         total_test_loss, total_test_correct))
+                self.logger.scalar_summary('test_loss', total_test_loss, step + 1)
+                self.logger.scalar_summary('test_acc', total_test_correct, step + 1)
             print()
 
             self.logger.scalar_summary('train_loss', total_train_loss, step + 1)
             self.logger.scalar_summary('train_acc', total_train_correct, step + 1)
-            self.logger.scalar_summary('test_loss', total_test_loss, step + 1)
-            self.logger.scalar_summary('test_acc', total_test_correct, step + 1)
+
             self.logger.scalar_summary('learning_rate', self.model.learning_rate, step + 1)
 
             # Adjust Learning Rate
-            if (step + 1) == 5000:  # Unfreeze the parameters
+            if (step + 1) == 100:  # Unfreeze the parameters
                 self.model.set_optimizer(self.model.learning_rate, 1.0)
             if (step + 1) % self.FLAGS.learning_rate_step == 0:
                 self.model.learning_rate = self.model.learning_rate * self.FLAGS.learning_rate_decay_factor

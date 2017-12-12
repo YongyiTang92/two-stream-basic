@@ -21,6 +21,7 @@ parser = argparse.ArgumentParser(description='PyTorch UCF101 Training')
 # Paths
 parser.add_argument('--data', default='/home/yongyi/ucf101_train/my_code/data', type=str, help='path to pkls')
 parser.add_argument('--rgb_file', default='/data/yongyi/ucf101_data/jpegs_256', type=str, help='path to dataset')
+parser.add_argument('--flow_file', default='/data/yongyi/ucf101_data/tvl1_flow', type=str, help='path to dataset')
 parser.add_argument('--train_dir', default='./experiments', type=str,
                     help='path to latest checkpoint (default: none)')
 
@@ -35,6 +36,7 @@ parser.add_argument('--print_freq', default=500, type=int,
                     help='print frequency (default: 10)')
 parser.add_argument('--device', default='0', type=str, help='id(s) for CUDA_VISIBLE_DEVICES')
 parser.add_argument('--resume', help="Load the check points.", action="store_true")
+parser.add_argument('--data_type', default='rgb', type=str, help='input data type: rgb or flow(5-frames)')
 
 # Hyper-Parameters
 parser.add_argument('--optimizer', default='SGD', type=str, help='Type of optimizer')
@@ -64,6 +66,7 @@ train_dir = os.path.normpath(os.path.join(FLAGS.train_dir,
                                           'lr_{0}'.format(FLAGS.lr),
                                           'momentum_{0}'.format(FLAGS.momentum),
                                           FLAGS.optimizer,
+                                          FLAGS.data_type,
                                           'weight_decay{0}'.format(FLAGS.weight_decay)))
 
 summaries_dir = os.path.normpath(os.path.join(train_dir, "log"))  # Directory for TB summaries

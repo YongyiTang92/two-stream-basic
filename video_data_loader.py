@@ -88,7 +88,7 @@ class ucf101_rgb_loader_basic_test(data.Dataset):
         Currently random select one frame; TODO: TSN
         """
         image_list = []
-        seg_len = 10
+        seg_len = 20
         num_seg = int(self.nFrame_list[index] / seg_len)
         for i in range(num_seg):
             image_index = random.randint(1 + i * seg_len, (i + 1) * seg_len)
@@ -116,6 +116,133 @@ class ucf101_rgb_loader_basic_test(data.Dataset):
 
         # Return image and target
         return img_tensor, target  # img size: (num_seg, 10, 3, 224, 224); target size: (num_seg, 10, 101)
+
+    def __len__(self):
+        return len(self.data_name_list)
+
+
+class ucf101_flow_loader_basic_train(data.Dataset):
+    def __init__(self, data_dir, file_dir, image_size=(224, 224)):
+        self.data_dir = data_dir  # data_dir = /home/yongyi/ucf101_train/my_code/data
+        self.file_dir = file_dir  # file_dir = /home/local/yongyi/...
+        self.image_size = image_size
+        self.size_all = [256, 224, 192, 168]  # 4 different length for width and height following TSN.
+
+        with open(os.path.join(self.data_dir, 'train_name.pkl'), 'r') as f:
+            self.data_name_list = pickle.load(f)
+        with open(os.path.join(self.data_dir, 'train_nFrames.pkl'), 'r') as f:
+            self.nFrame_list = pickle.load(f)
+        with open(os.path.join(self.data_dir, 'train_label.pkl'), 'r') as f:
+            self.label_list = pickle.load(f)
+
+    def __getitem__(self, index):
+        # Read a list of image by index
+        target = self.label_list[index:index + 1, :]
+        target = torch.from_numpy(target)  # size: (1, 101) 101 classes for ucf101
+        # One image example
+        file_name = self.data_name_list[index]
+        """
+        Currently random select one frame; TODO: TSN
+        """
+        image_index = random.randint(1, self.nFrame_list[index] - 5)
+        img_list = []
+        for i in range(5):
+            img_dir = os.path.join(self.file_dir, file_name, 'u', ('frame' + '%06d' % (image_index + i) + '.jpg'))
+            img = Image.open(img_dir).convert('L')  # convert to grayscale
+            img_list.append(img)
+            img_dir = os.path.join(self.file_dir, file_name, 'v', ('frame' + '%06d' % (image_index + i) + '.jpg'))
+            img = Image.open(img_dir).convert('L')  # convert to grayscale
+            img_list.append(img)
+
+        # Perform transform
+        # Scale jittering
+        width_rand = self.size_all[random.randint(0, 3)]
+        height_rand = self.size_all[random.randint(0, 3)]
+        crop_size = (height_rand, width_rand)
+        transform = trans.Compose([trans.Resize(256),
+                                   trans.TenCrop(crop_size),
+                                   trans.Lambda(lambda crops:
+                                                torch.stack([trans.ToTensor()(trans.Resize(self.image_size)(crop)) for crop in crops]))])
+
+        img_tensor = torch.cat([transform(img) for img in img_list], 1)
+        random_crop_index = random.randint(0, 9)
+        img_tensor = img_tensor[random_crop_index, :]
+        target = target.squeeze()
+
+        # Return image and target
+        return img_tensor, target  # img size: (3, 224, 224); target size: (101)
+
+    def __len__(self):
+        return len(self.data_name_list)
+
+
+class ucf101_flow_loader_basic_test(data.Dataset):
+    def __init__(self, data_dir, file_dir, image_size=(224, 224)):
+        self.data_dir = data_dir  # data_dir = /home/yongyi/ucf101_train/my_code/data
+        self.file_dir = file_dir  # file_dir = /home/local/yongyi/...
+        self.image_size = image_size
+        self.size_all = [256, 224, 192, 168]  # 4 different length for width and height following TSN.
+
+        with open(os.path.join(self.data_dir, 'test_name.pkl'), 'r') as f:
+            self.data_name_list = pickle.load(f)
+        with open(os.path.join(self.data_dir, 'test_nFrames.pkl'), 'r') as f:
+            self.nFrame_list = pickle.load(f)
+        with open(os.path.join(self.data_dir, 'test_label.pkl'), 'r') as f:
+            self.label_list = pickle.load(f)
+        self.transform = trans.Compose([trans.Resize(256),
+                                        trans.TenCrop(self.image_size),
+                                        trans.Lambda(lambda crops:
+                                                     torch.stack([trans.ToTensor()(trans.Resize(self.image_size)(crop)) for crop in crops]))])
+
+    def __getitem__(self, index):
+        # Read a list of image by index
+        target = self.label_list[index:index + 1, :]
+        target = torch.from_numpy(target)  # size: (1, 101) 101 classes for ucf101
+        # One image example
+        file_name = self.data_name_list[index]
+        """
+        Currently random select one frame; TODO: TSN
+        """
+        image_list = []
+        seg_len = 20
+        num_seg = int(self.nFrame_list[index] / seg_len)
+        for i in range(num_seg):
+            image_index = random.randint(1 + i * seg_len, (i + 1) * seg_len)
+            img_temporal = []
+            for j in range(5):
+                img_dir = os.path.join(self.file_dir, file_name, 'u', ('frame' + '%06d' % (image_index + j) + '.jpg'))
+                img = Image.open(img_dir).convert('L')
+                img_temporal.append(img)
+                img_dir = os.path.join(self.file_dir, file_name, 'v', ('frame' + '%06d' % (image_index + j) + '.jpg'))
+                img = Image.open(img_dir).convert('L')
+                img_temporal.append(img)
+            image_list.append(img_temporal)
+
+        # Perform transform
+        # Scale jittering
+        width_rand = self.size_all[random.randint(0, 3)]
+        height_rand = self.size_all[random.randint(0, 3)]
+        crop_size = (height_rand, width_rand)
+
+        if self.transform is None:
+            transform = trans.Compose([trans.Resize(256),
+                                       trans.TenCrop(crop_size),
+                                       trans.Lambda(lambda crops:
+                                                    torch.stack([trans.ToTensor()(trans.Resize(self.image_size)(crop)) for crop in crops]))])
+        else:
+            transform = self.transform
+
+        target = target.clone().repeat(10, 1)
+        imge_list_new = []
+        for i, img_temporal in enumerate(image_list):
+            img_tensor = torch.cat([transform(imgs) for imgs in img_temporal], 1)  # (10, temporal_len*2, 224, 224)
+            imge_list_new.append(img_tensor)
+
+        img_tensor = torch.stack(imge_list_new)  # size (num_seg, 10, temporal_len*2, 224, 224)
+        target = torch.stack([target for x in range(len(image_list))])  # size (num_seg, 10, 101)
+
+        # Return image and target
+        return img_tensor, target  # img size: (num_seg, 10, temporal_len*2, 224, 224); target size: (num_seg, 10, 101)
 
     def __len__(self):
         return len(self.data_name_list)

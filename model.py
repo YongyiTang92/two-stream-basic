@@ -5,10 +5,17 @@ import torch.nn as nn
 from torch.autograd import Variable
 
 
-class rgb_resnet18_basic(object):
-    def __init__(self, FLAGS):
+class resnet18_basic(object):
+    def __init__(self, FLAGS, data_type='rgb'):
         self.FLAGS = FLAGS
         self.model = resnet18(pretrained=True)
+        if data_type == 'flow':
+            self.to_flow_model(self.model)
+        elif data_type = 'rgb':
+            pass
+        else:
+            raise('Error data_type: ', data_type)
+        self.data_type = data_type
         self.max_gradient_norm = FLAGS.max_gradient_norm
         self.loss = nn.CrossEntropyLoss()
         self.learning_rate = FLAGS.lr
@@ -18,7 +25,12 @@ class rgb_resnet18_basic(object):
             self.loss = self.loss.cuda()
 
     def set_optimizer(self, lr, tune_ratio=0.1):
-        ignored_params = list(map(id, [self.model.fc_new.parameters(), self.model.bn1_new.parameters()]))
+        if self.data_type == 'flow':
+            ignored_params_list = [self.model.fc_new.parameters(), self.model.bn1_new.parameters(), self.model.conv1.parameters()]
+        else:
+            ignored_params_list = [self.model.fc_new.parameters(), self.model.bn1_new.parameters()]
+
+        ignored_params = list(map(id, ignored_params_list))
         base_params = filter(lambda p: id(p) not in ignored_params, self.model.parameters())
         train_params = filter(lambda p: id(p) in ignored_params, self.model.parameters())
         self.optimizer = torch.optim.SGD(
@@ -28,7 +40,7 @@ class rgb_resnet18_basic(object):
     def train_step(self, image_tensor, label_tensor, forward_only):
         """
         Inputs:
-            image_tensor: (batch_size, 3, 224, 224) # one TenCroped sample
+            image_tensor: (batch_size, in_channel, 224, 224) # one TenCroped sample
             label_tensor: (batch_size, 101)
             forward_only: True for train, False for evaluate
         Output:
@@ -58,7 +70,7 @@ class rgb_resnet18_basic(object):
     def test_step(self, image_tensor, label_tensor):
         """
         Inputs:
-            image_tensor: (frames, 10, 3, 224, 224) # one TenCroped sample
+            image_tensor: (frames, 10, in_channel, 224, 224) # one TenCroped sample
             label_tensor: (frames, 10, 101)
         Output:
             Loss:
@@ -90,3 +102,16 @@ class rgb_resnet18_basic(object):
         if torch.cuda.is_available():
             x = x.cpu()
         return x.data
+
+    def to_flow_model(self, model):
+        """
+        Re-intialize the first Conv Layer from 3 channel to 10 Channel
+        By replicating the weights with means (Or add gaussian noise later)
+        """
+        conv2 = nn.Conv2d(10, self.model.conv1.out_channels,
+                          kernel_size=self.model.conv1.kernel_size,
+                          stride=self.model.conv1.stride,
+                          padding=self.model.conv1.padding, bias=False)
+        conv2.weight.data = torch.mean(self.model.conv1.weight, 1,
+                                       keepdim=True).repeat(1, 20, 1, 1).data
+        self.model.conv1 = conv2
