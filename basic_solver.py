@@ -8,7 +8,8 @@ from utilities import save_checkpoint, read_checkpoint
 from logger import Logger
 import time
 from video_data_loader import ucf101_rgb_loader_basic_train, ucf101_rgb_loader_basic_test
-from model import rgb_resnet18_basic
+from video_data_loader import ucf101_flow_loader_basic_train, ucf101_flow_loader_basic_test
+from model import resnet18_basic
 
 
 class solver(object):
