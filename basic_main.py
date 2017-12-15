@@ -37,6 +37,7 @@ parser.add_argument('--print_freq', default=500, type=int,
 parser.add_argument('--device', default='0', type=str, help='id(s) for CUDA_VISIBLE_DEVICES')
 parser.add_argument('--resume', help="Load the check points.", action="store_true")
 parser.add_argument('--data_type', default='rgb', type=str, help='input data type: rgb or flow(5-frames)')
+parser.add_argument('--model', default='resnet18', type=str, help='model type')
 
 # Hyper-Parameters
 parser.add_argument('--optimizer', default='SGD', type=str, help='Type of optimizer')

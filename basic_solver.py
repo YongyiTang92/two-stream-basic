@@ -36,6 +36,8 @@ class solver(object):
             if model_exist:
                 model.model.load_state_dict(checkpoint['state_dict'])
                 self.start_step = checkpoint['step'] + 1
+                model.learning_rate = checkpoint['lr']
+                model.set_optimizer(model.learning_rate, 1.0)
 
         return model
 
@@ -85,7 +87,7 @@ class solver(object):
                   "============================" % (self.data_type, step + 1,
                                                     self.model.learning_rate, step_time * 1000,
                                                     total_train_loss, total_train_correct))
-            if (step + 1) == 100:
+            if (step + 1) % 100 == 0:
                 start_time = time.time()
                 for i, data in enumerate(self.test_loader, 0):
                     images, labels = data
@@ -123,6 +125,7 @@ class solver(object):
                 start_time = time.time()
                 save_checkpoint({
                     'step': step,
+                    'lr': self.model.learning_rate,
                     'state_dict': self.model.model.state_dict()
                 }, self.train_dir, 100)
                 print('Saving checkpoint at step: %d' % (step + 1))

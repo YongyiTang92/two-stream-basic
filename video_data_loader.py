@@ -4,10 +4,8 @@ import torch
 import torch.utils.data as data
 import scipy.io as io
 import pickle
-import time
 import torchvision.transforms as trans
 import random
-from multiprocessing import Pool
 from PIL import Image
 
 
@@ -43,14 +41,25 @@ class ucf101_rgb_loader_basic_train(data.Dataset):
         width_rand = self.size_all[random.randint(0, 3)]
         height_rand = self.size_all[random.randint(0, 3)]
         crop_size = (height_rand, width_rand)
-        transform = trans.Compose([trans.Resize(256),
-                                   trans.TenCrop(crop_size),
-                                   trans.Lambda(lambda crops:
-                                                torch.stack([trans.ToTensor()(trans.Resize(self.image_size)(crop)) for crop in crops]))])
+        ######TenCrop#####
+        # transform = trans.Compose([trans.Resize((256, 340)),
+        #                            trans.TenCrop(crop_size)])
+        # transform2 = trans.Compose([trans.Resize(self.image_size), trans.ToTensor()])
+
+        # img_tuple = transform(img)
+        # random_crop_index = random.randint(0, 9)
+        # img = img_tuple[random_crop_index]
+        # img = transform2(img)
+        # target = target.squeeze()
+        ######TenCrop#####
+        ######RandomCrop#####
+        transform = trans.Compose([trans.Resize((256, 340)),
+                                   trans.RandomHorizontalFlip(),
+                                   trans.RandomCrop(crop_size),
+                                   trans.Resize(self.image_size),
+                                   trans.ToTensor()])
 
         img = transform(img)
-        random_crop_index = random.randint(0, 9)
-        img = img[random_crop_index, :]
         target = target.squeeze()
 
         # Return image and target
@@ -101,14 +110,7 @@ class ucf101_rgb_loader_basic_test(data.Dataset):
         width_rand = self.size_all[random.randint(0, 3)]
         height_rand = self.size_all[random.randint(0, 3)]
         crop_size = (height_rand, width_rand)
-
-        if self.transform is None:
-            transform = trans.Compose([trans.Resize(256),
-                                       trans.TenCrop(crop_size),
-                                       trans.Lambda(lambda crops:
-                                                    torch.stack([trans.ToTensor()(trans.Resize(self.image_size)(crop)) for crop in crops]))])
-        else:
-            transform = self.transform
+        transform = self.transform
 
         target = target.clone().repeat(10, 1)
         img_tensor = torch.stack([transform(imgs) for imgs in image_list])  # size (num_seg, 10, 3, 224, 224)
@@ -147,10 +149,10 @@ class ucf101_flow_loader_basic_train(data.Dataset):
         image_index = random.randint(1, self.nFrame_list[index] - 5)
         img_list = []
         for i in range(5):
-            img_dir = os.path.join(self.file_dir, file_name, 'u', ('frame' + '%06d' % (image_index + i) + '.jpg'))
+            img_dir = os.path.join(self.file_dir, 'u', file_name, ('frame' + '%06d' % (image_index + i) + '.jpg'))
             img = Image.open(img_dir).convert('L')  # convert to grayscale
             img_list.append(img)
-            img_dir = os.path.join(self.file_dir, file_name, 'v', ('frame' + '%06d' % (image_index + i) + '.jpg'))
+            img_dir = os.path.join(self.file_dir, 'v', file_name, ('frame' + '%06d' % (image_index + i) + '.jpg'))
             img = Image.open(img_dir).convert('L')  # convert to grayscale
             img_list.append(img)
 
@@ -160,17 +162,16 @@ class ucf101_flow_loader_basic_train(data.Dataset):
         height_rand = self.size_all[random.randint(0, 3)]
         crop_size = (height_rand, width_rand)
         transform = trans.Compose([trans.Resize(256),
-                                   trans.TenCrop(crop_size),
-                                   trans.Lambda(lambda crops:
-                                                torch.stack([trans.ToTensor()(trans.Resize(self.image_size)(crop)) for crop in crops]))])
+                                   trans.TenCrop(crop_size)])
+        transform2 = trans.Compose([trans.Resize(self.image_size), trans.ToTensor()])
 
-        img_tensor = torch.cat([transform(img) for img in img_list], 1)
         random_crop_index = random.randint(0, 9)
-        img_tensor = img_tensor[random_crop_index, :]
+        # img_tensor = img_tensor[random_crop_index, :]
+        img_tensor = torch.cat([transform2(transform(img_tmp)[random_crop_index]) for img_tmp in img_list], 0)
         target = target.squeeze()
 
         # Return image and target
-        return img_tensor, target  # img size: (3, 224, 224); target size: (101)
+        return img_tensor, target  # img size: (10, 224, 224); target size: (101)
 
     def __len__(self):
         return len(self.data_name_list)
@@ -205,15 +206,15 @@ class ucf101_flow_loader_basic_test(data.Dataset):
         """
         image_list = []
         seg_len = 20
-        num_seg = int(self.nFrame_list[index] / seg_len)
+        num_seg = int((self.nFrame_list[index] - 5) / seg_len)
         for i in range(num_seg):
             image_index = random.randint(1 + i * seg_len, (i + 1) * seg_len)
             img_temporal = []
             for j in range(5):
-                img_dir = os.path.join(self.file_dir, file_name, 'u', ('frame' + '%06d' % (image_index + j) + '.jpg'))
+                img_dir = os.path.join(self.file_dir, 'u', file_name, ('frame' + '%06d' % (image_index + j) + '.jpg'))
                 img = Image.open(img_dir).convert('L')
                 img_temporal.append(img)
-                img_dir = os.path.join(self.file_dir, file_name, 'v', ('frame' + '%06d' % (image_index + j) + '.jpg'))
+                img_dir = os.path.join(self.file_dir, 'v', file_name, ('frame' + '%06d' % (image_index + j) + '.jpg'))
                 img = Image.open(img_dir).convert('L')
                 img_temporal.append(img)
             image_list.append(img_temporal)

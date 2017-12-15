@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-from my_resnet import resnet18
+from my_resnet import resnet18, resnet50
 import torch.nn as nn
 from torch.autograd import Variable
 
@@ -8,10 +8,16 @@ from torch.autograd import Variable
 class resnet18_basic(object):
     def __init__(self, FLAGS, data_type='rgb'):
         self.FLAGS = FLAGS
-        self.model = resnet18(pretrained=True)
+        if FLAGS.model == 'resnet18':
+            self.model = resnet18(pretrained=True)
+        elif FLAGS.model == 'resnet50':
+            self.model = resnet50(pretrained=True)
+        else:
+            raise('Error model type: ', FLAGS.model)
+
         if data_type == 'flow':
             self.to_flow_model(self.model)
-        elif data_type = 'rgb':
+        elif data_type == 'rgb':
             pass
         else:
             raise('Error data_type: ', data_type)
@@ -113,5 +119,5 @@ class resnet18_basic(object):
                           stride=self.model.conv1.stride,
                           padding=self.model.conv1.padding, bias=False)
         conv2.weight.data = torch.mean(self.model.conv1.weight, 1,
-                                       keepdim=True).repeat(1, 20, 1, 1).data
+                                       keepdim=True).repeat(1, 10, 1, 1).data
         self.model.conv1 = conv2
