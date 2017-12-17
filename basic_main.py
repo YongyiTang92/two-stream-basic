@@ -6,15 +6,15 @@ from basic_solver import solver
 
 
 def main(FLAGS, train_dir, summaries_dir):
-    cudnn.benchmark = True
-    os.environ['CUDA_VISIBLE_DEVICES'] = FLAGS.device
+  cudnn.benchmark = True
+  os.environ['CUDA_VISIBLE_DEVICES'] = FLAGS.device
 
-    solver_model = solver(FLAGS, train_dir, summaries_dir)
-    solver_model.train()
-    # if FLAGS.sample:
-    #     solver_model.sample()
-    # else:
-    #     solver_model.train()
+  solver_model = solver(FLAGS, train_dir, summaries_dir)
+  solver_model.train()
+  # if FLAGS.sample:
+  #     solver_model.sample()
+  # else:
+  #     solver_model.train()
 
 
 parser = argparse.ArgumentParser(description='PyTorch UCF101 Training')
@@ -67,6 +67,7 @@ train_dir = os.path.normpath(os.path.join(FLAGS.train_dir,
                                           'lr_{0}'.format(FLAGS.lr),
                                           'momentum_{0}'.format(FLAGS.momentum),
                                           FLAGS.optimizer,
+                                          FLAGS.model,
                                           FLAGS.data_type,
                                           'weight_decay{0}'.format(FLAGS.weight_decay)))
 

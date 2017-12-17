@@ -42,25 +42,25 @@ class ucf101_rgb_loader_basic_train(data.Dataset):
         height_rand = self.size_all[random.randint(0, 3)]
         crop_size = (height_rand, width_rand)
         ######TenCrop#####
-        # transform = trans.Compose([trans.Resize((256, 340)),
-        #                            trans.TenCrop(crop_size)])
-        # transform2 = trans.Compose([trans.Resize(self.image_size), trans.ToTensor()])
+        transform = trans.Compose([trans.Resize((256, 340)),
+                                   trans.TenCrop(crop_size)])
+        transform2 = trans.Compose([trans.Resize(self.image_size), trans.ToTensor()])
 
-        # img_tuple = transform(img)
-        # random_crop_index = random.randint(0, 9)
-        # img = img_tuple[random_crop_index]
-        # img = transform2(img)
-        # target = target.squeeze()
+        img_tuple = transform(img)
+        random_crop_index = random.randint(0, 9)
+        img = img_tuple[random_crop_index]
+        img = transform2(img)
+        target = target.squeeze()
         ######TenCrop#####
         ######RandomCrop#####
-        transform = trans.Compose([trans.Resize((256, 340)),
-                                   trans.RandomHorizontalFlip(),
-                                   trans.RandomCrop(crop_size),
-                                   trans.Resize(self.image_size),
-                                   trans.ToTensor()])
+        # transform = trans.Compose([trans.Resize((256, 340)),
+        #                            trans.RandomHorizontalFlip(),
+        #                            trans.RandomCrop(crop_size),
+        #                            trans.Resize(self.image_size),
+        #                            trans.ToTensor()])
 
-        img = transform(img)
-        target = target.squeeze()
+        # img = transform(img)
+        # target = target.squeeze()
 
         # Return image and target
         return img, target  # img size: (3, 224, 224); target size: (101)

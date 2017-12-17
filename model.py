@@ -36,7 +36,8 @@ class resnet18_basic(object):
         else:
             ignored_params_list = [self.model.fc_new.parameters(), self.model.bn1_new.parameters()]
 
-        ignored_params = list(map(id, ignored_params_list))
+        ignored_params = [map(id, a) for a in ignored_params_list]
+        ignored_params = [item for sublist in ignored_params for item in sublist]
         base_params = filter(lambda p: id(p) not in ignored_params, self.model.parameters())
         train_params = filter(lambda p: id(p) in ignored_params, self.model.parameters())
         self.optimizer = torch.optim.SGD(
