@@ -91,7 +91,7 @@ class resnet18_basic(object):
         predict_score = self.model(img_var)  # May OOM
         predict_score_avg = torch.mean(predict_score, 0, keepdim=True)
         loss = self.loss(predict_score_avg, label_var[:])
-        _, predict_labels = torch.max(predict_score, 1)
+        _, predict_labels = torch.max(predict_score_avg, 1)
         correct = predict_labels.eq(label_var)
         return self.to_data(loss), self.to_data(correct)
 

@@ -87,7 +87,7 @@ class solver(object):
                   "============================" % (self.data_type, step + 1,
                                                     self.model.learning_rate, step_time * 1000,
                                                     total_train_loss, total_train_correct))
-            if (step + 1) % 100 == 0:
+            if (step + 1) % 50 == 0:
                 start_time = time.time()
                 for i, data in enumerate(self.test_loader, 0):
                     images, labels = data

@@ -97,19 +97,16 @@ class ucf101_rgb_loader_basic_test(data.Dataset):
         Currently random select one frame; TODO: TSN
         """
         image_list = []
-        seg_len = 20
+        seg_len = 5
         num_seg = int(self.nFrame_list[index] / seg_len)
-        for i in range(num_seg):
-            image_index = random.randint(1 + i * seg_len, (i + 1) * seg_len)
+        for i in range(seg_len):
+            image_index = random.randint(1 + i * num_seg, (i + 1) * num_seg)
             img_dir = os.path.join(self.file_dir, file_name, ('frame' + '%06d' % image_index + '.jpg'))
             img = Image.open(img_dir).convert('RGB')
             image_list.append(img)
 
         # Perform transform
         # Scale jittering
-        width_rand = self.size_all[random.randint(0, 3)]
-        height_rand = self.size_all[random.randint(0, 3)]
-        crop_size = (height_rand, width_rand)
         transform = self.transform
 
         target = target.clone().repeat(10, 1)
