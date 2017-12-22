@@ -89,7 +89,10 @@ class resnet18_basic(object):
         img_var, label_var = self.to_variable(image_tensor), self.to_variable(labels_index)
         img_var = img_var.view(-1, img_var.size(2), img_var.size(3), img_var.size(4))
         predict_score = self.model(img_var)  # May OOM
-        predict_score_avg = torch.mean(predict_score, 0, keepdim=True)
+        if self.FLAGS.pooling == 'max':
+            predict_score_avg, _ = torch.max(predict_score, 0, keepdim=True)
+        else:
+            predict_score_avg = torch.mean(predict_score, 0, keepdim=True)
         loss = self.loss(predict_score_avg, label_var[:])
         _, predict_labels = torch.max(predict_score_avg, 1)
         correct = predict_labels.eq(label_var)

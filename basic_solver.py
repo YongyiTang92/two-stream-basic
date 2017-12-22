@@ -44,10 +44,10 @@ class solver(object):
     def creat_data_loader(self):
         if self.data_type == 'rgb':
             train_dataset = ucf101_rgb_loader_basic_train(self.FLAGS.data, self.FLAGS.rgb_file)
-            test_dataset = ucf101_rgb_loader_basic_test(self.FLAGS.data, self.FLAGS.rgb_file)
+            test_dataset = ucf101_rgb_loader_basic_test(self.FLAGS.data, self.FLAGS.rgb_file, self.FLAGS.test_segs)
         elif self.data_type == 'flow':
             train_dataset = ucf101_flow_loader_basic_train(self.FLAGS.data, self.FLAGS.flow_file)
-            test_dataset = ucf101_flow_loader_basic_test(self.FLAGS.data, self.FLAGS.flow_file)
+            test_dataset = ucf101_flow_loader_basic_test(self.FLAGS.data, self.FLAGS.flow_file, self.FLAGS.test_segs)
         else:
             raise('Error data type: ', self.data_type)
         self.train_loader = torch.utils.data.DataLoader(train_dataset,
@@ -61,6 +61,7 @@ class solver(object):
         """
         Train the Network
         """
+        lr_decay_list = [0.5, 0.5, 0.5, 0.1, 0.1]
         for step in range(self.start_step, self.FLAGS.iterations):
             train_loss, train_correct = [], []
             test_loss, test_correct = [], []
@@ -117,8 +118,12 @@ class solver(object):
             if (step + 1) == 100:  # Unfreeze the parameters
                 self.model.set_optimizer(self.model.learning_rate, 1.0)
             if (step + 1) % self.FLAGS.learning_rate_step == 0:
-                self.model.learning_rate = self.model.learning_rate * self.FLAGS.learning_rate_decay_factor
-                self.model.set_optimizer(self.model.learning_rate, 1.0)
+                try:
+                    self.model.learning_rate = self.model.learning_rate * lr_decay_list.pop()
+                    self.model.set_optimizer(self.model.learning_rate, 1.0)
+                except Exception as e:
+                    pass
+
                 # Save Checkpoint
             if (step + 1) % self.FLAGS.print_freq == 0:
                 print("Saving the model...")

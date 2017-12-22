@@ -70,12 +70,12 @@ class ucf101_rgb_loader_basic_train(data.Dataset):
 
 
 class ucf101_rgb_loader_basic_test(data.Dataset):
-    def __init__(self, data_dir, file_dir, image_size=(224, 224)):
+    def __init__(self, data_dir, file_dir, image_size=(224, 224), test_segs=5):
         self.data_dir = data_dir  # data_dir = /home/yongyi/ucf101_train/my_code/data
         self.file_dir = file_dir  # file_dir = /home/local/yongyi/...
         self.image_size = image_size
         self.size_all = [256, 224, 192, 168]  # 4 different length for width and height following TSN.
-
+        self.test_segs = test_segs
         with open(os.path.join(self.data_dir, 'test_name.pkl'), 'r') as f:
             self.data_name_list = pickle.load(f)
         with open(os.path.join(self.data_dir, 'test_nFrames.pkl'), 'r') as f:
@@ -97,10 +97,10 @@ class ucf101_rgb_loader_basic_test(data.Dataset):
         Currently random select one frame; TODO: TSN
         """
         image_list = []
-        seg_len = 5
-        num_seg = int(self.nFrame_list[index] / seg_len)
-        for i in range(seg_len):
-            image_index = random.randint(1 + i * num_seg, (i + 1) * num_seg)
+        num_seg = self.test_segs
+        seg_len = int(self.nFrame_list[index] / num_seg)
+        for i in range(num_seg):
+            image_index = random.randint(1 + i * seg_len, (i + 1) * seg_len)
             img_dir = os.path.join(self.file_dir, file_name, ('frame' + '%06d' % image_index + '.jpg'))
             img = Image.open(img_dir).convert('RGB')
             image_list.append(img)
@@ -175,12 +175,12 @@ class ucf101_flow_loader_basic_train(data.Dataset):
 
 
 class ucf101_flow_loader_basic_test(data.Dataset):
-    def __init__(self, data_dir, file_dir, image_size=(224, 224)):
+    def __init__(self, data_dir, file_dir, image_size=(224, 224), test_segs=5):
         self.data_dir = data_dir  # data_dir = /home/yongyi/ucf101_train/my_code/data
         self.file_dir = file_dir  # file_dir = /home/local/yongyi/...
         self.image_size = image_size
         self.size_all = [256, 224, 192, 168]  # 4 different length for width and height following TSN.
-
+        self.test_segs = test_segs
         with open(os.path.join(self.data_dir, 'test_name.pkl'), 'r') as f:
             self.data_name_list = pickle.load(f)
         with open(os.path.join(self.data_dir, 'test_nFrames.pkl'), 'r') as f:
@@ -202,8 +202,8 @@ class ucf101_flow_loader_basic_test(data.Dataset):
         Currently random select one frame; TODO: TSN
         """
         image_list = []
-        seg_len = 20
-        num_seg = int((self.nFrame_list[index] - 5) / seg_len)
+        num_seg = self.test_segs
+        seg_len = int((self.nFrame_list[index] - 5) / num_seg)
         for i in range(num_seg):
             image_index = random.randint(1 + i * seg_len, (i + 1) * seg_len)
             img_temporal = []

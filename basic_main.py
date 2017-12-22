@@ -55,6 +55,10 @@ parser.add_argument('--learning_rate_step', default=1500, type=int,
                     help='learning_rate_step (default: 1500)')
 parser.add_argument('--max_gradient_norm', default=40, type=float,
                     help='max_gradient_norm (default: 40)')
+parser.add_argument('--test_segs', default=5, type=int,
+                    help='number of segments for testing (default: 5)')
+parser.add_argument('--pooling', default='mean', type=str,
+                    help='pooling method for testing')
 
 
 # parser.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
@@ -67,6 +71,9 @@ train_dir = os.path.normpath(os.path.join(FLAGS.train_dir,
                                           'lr_{0}'.format(FLAGS.lr),
                                           'momentum_{0}'.format(FLAGS.momentum),
                                           'learning_rate_step_{0}'.format(FLAGS.learning_rate_step),
+                                          'learning_rate_decay_factor_{0}'.format(FLAGS.learning_rate_decay_factor),
+                                          'test_segs_{0}'.format(FLAGS.test_segs),
+                                          FLAGS.pooling,
                                           FLAGS.optimizer,
                                           FLAGS.model,
                                           FLAGS.data_type,
