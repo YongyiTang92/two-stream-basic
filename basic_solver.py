@@ -44,10 +44,10 @@ class solver(object):
     def creat_data_loader(self):
         if self.data_type == 'rgb':
             train_dataset = ucf101_rgb_loader_basic_train(self.FLAGS.data, self.FLAGS.rgb_file)
-            test_dataset = ucf101_rgb_loader_basic_test(self.FLAGS.data, self.FLAGS.rgb_file, self.FLAGS.test_segs)
+            test_dataset = ucf101_rgb_loader_basic_test(self.FLAGS.data, self.FLAGS.rgb_file, test_segs=self.FLAGS.test_segs)
         elif self.data_type == 'flow':
             train_dataset = ucf101_flow_loader_basic_train(self.FLAGS.data, self.FLAGS.flow_file)
-            test_dataset = ucf101_flow_loader_basic_test(self.FLAGS.data, self.FLAGS.flow_file, self.FLAGS.test_segs)
+            test_dataset = ucf101_flow_loader_basic_test(self.FLAGS.data, self.FLAGS.flow_file, test_segs=self.FLAGS.test_segs)
         else:
             raise('Error data type: ', self.data_type)
         self.train_loader = torch.utils.data.DataLoader(train_dataset,
@@ -62,6 +62,7 @@ class solver(object):
         Train the Network
         """
         lr_decay_list = [0.5, 0.5, 0.5, 0.1, 0.1]
+        best_acc, total_test_correct = 0.0, 0.0
         for step in range(self.start_step, self.FLAGS.iterations):
             train_loss, train_correct = [], []
             test_loss, test_correct = [], []
@@ -125,7 +126,9 @@ class solver(object):
                     pass
 
                 # Save Checkpoint
-            if (step + 1) % self.FLAGS.print_freq == 0:
+            if ((step + 1) % self.FLAGS.print_freq == 0) or total_test_correct > best_acc:
+                if total_test_correct > best_acc:
+                    best_acc = total_test_correct
                 print("Saving the model...")
                 start_time = time.time()
                 save_checkpoint({
@@ -136,3 +139,25 @@ class solver(object):
                 print('Saving checkpoint at step: %d' % (step + 1))
                 # model.saver.save(sess, os.path.normpath(os.path.join(train_dir, 'checkpoint')), global_step=current_step )
                 print("done in {0:.2f} ms".format((time.time() - start_time) * 1000))
+
+    def test(self):
+        test_loss, test_correct = [], []
+        start_time = time.time()
+        for i, data in enumerate(self.test_loader, 0):
+            images, labels = data
+            test_image, test_labels = images[0, :], labels[0, :]
+            # test_image, test_labels = self.test_dataset[test_index]
+            loss, correct = self.model.test_step(test_image, test_labels)
+            test_loss.append(loss.numpy())
+            test_correct.append(correct.numpy())
+        total_test_loss = np.mean(np.hstack(test_loss))
+        total_test_correct = np.mean(np.hstack(test_correct))
+        step_time = (time.time() - start_time)
+        print("============================\n"
+              "Data Type:           %s\n"
+              "Global step:         %d\n"
+              "Test-time (ms):     %.4f\n"
+              "Test loss avg:      %.4f\n"
+              "Test Accuracy:      %.4f\n"
+              "============================" % (self.data_type, self.start_step + 1, step_time * 1000,
+                                                total_test_loss, total_test_correct))

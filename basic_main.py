@@ -10,7 +10,10 @@ def main(FLAGS, train_dir, summaries_dir):
   os.environ['CUDA_VISIBLE_DEVICES'] = FLAGS.device
 
   solver_model = solver(FLAGS, train_dir, summaries_dir)
-  solver_model.train()
+  if FLAGS.eval == 'train':
+    solver_model.train()
+  else:
+    solver_model.test()
   # if FLAGS.sample:
   #     solver_model.sample()
   # else:
@@ -24,6 +27,8 @@ parser.add_argument('--rgb_file', default='/data/yongyi/ucf101_data/jpegs_256', 
 parser.add_argument('--flow_file', default='/data/yongyi/ucf101_data/tvl1_flow', type=str, help='path to dataset')
 parser.add_argument('--train_dir', default='./experiments', type=str,
                     help='path to latest checkpoint (default: none)')
+parser.add_argument('--eval', default='train', type=str,
+                    help='Evaluation Type')
 
 # Parameters
 parser.add_argument('--workers', default=4, type=int,

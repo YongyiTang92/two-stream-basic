@@ -218,17 +218,7 @@ class ucf101_flow_loader_basic_test(data.Dataset):
 
         # Perform transform
         # Scale jittering
-        width_rand = self.size_all[random.randint(0, 3)]
-        height_rand = self.size_all[random.randint(0, 3)]
-        crop_size = (height_rand, width_rand)
-
-        if self.transform is None:
-            transform = trans.Compose([trans.Resize(256),
-                                       trans.TenCrop(crop_size),
-                                       trans.Lambda(lambda crops:
-                                                    torch.stack([trans.ToTensor()(trans.Resize(self.image_size)(crop)) for crop in crops]))])
-        else:
-            transform = self.transform
+        transform = self.transform
 
         target = target.clone().repeat(10, 1)
         imge_list_new = []
